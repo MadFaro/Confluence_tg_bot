@@ -1,1 +1,37 @@
-﻿id_firstname_phone
+﻿inputs = keras.Input(shape=(df_normalized.shape[1], 7))
+x = layers.Conv1D(filters=16, kernel_size=3, activation='relu')(inputs)
+x = layers.Conv1D(filters=16, kernel_size=3, activation='relu')(x)
+x = layers.GlobalAveragePooling1D()(x)
+
+# Добавление двух слоев LSTM
+x = layers.LSTM(50, activation='relu', return_sequences=True)(x)
+x = layers.LSTM(50, activation='relu')(x)
+
+x = layers.Dense(32, activation='relu')(x)
+x = layers.Reshape((32, 1))(x)
+
+# Архитектура Transformer
+num_layers = 2
+d_model = 32
+num_heads = 4
+dropout = 0.3
+
+for _ in range(num_layers):
+    # Multi-Head Attention слой
+    attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=d_model)
+    x = attention(x, x)
+    x = layers.Dropout(dropout)(x)
+    x = layers.LayerNormalization(epsilon=1e-6)(x)
+
+    # Feed Forward сеть
+    ffn = keras.Sequential([
+        layers.Dense(64, activation='relu'),
+        layers.Dense(d_model)
+    ])
+    x = ffn(x)
+    x = layers.Dropout(dropout)(x)
+    x = layers.LayerNormalization(epsilon=1e-6)(x)
+
+x = layers.Reshape((32,))(x)
+
+outputs = layers.Dense(1)(x)
